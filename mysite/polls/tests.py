@@ -54,6 +54,48 @@ class QuestionIndexViewTestCases(TestCase):
         """
         response = self.client.get(reverse('polls:index'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No polls are available.")
+        # self.assertContains(response, "No polls are available.")
         self.assertQuerysetEqual(response.context['latest_question_list'], [])
+
+    def test_past_question(self):
+        """
+        Questions with pub_date in the past should be shown
+        :return:
+        """
+        create_question(question_text="Past Question", days=-30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertEqual(response.status_code, 200)
+        self.assertQuerysetEqual(response.context['latest_question_list'], ['<Question: Past Question>'])
+
+    def test_future_question(self):
+        """
+        Future question shouldn't be displayed
+        :return:
+        """
+        create_question(question_text="Future Question", days=30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(response.context['latest_question_list'], [])
+
+    def test_past_future_question(self):
+        """
+        When both past and future questions are there, the view needs to show the past question and not the future one.
+        :return:
+        """
+        create_question(question_text="Past Question", days=-30)
+        create_question(question_text="Future Question", days=30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(response.context['latest_question_list'], ['<Question: Past Question>'])
+
+    def test_two_past_question(self):
+        """
+        If two past questions are present, both should be displayed
+        :return:
+        """
+        create_question(question_text="Past Question 1", days=-30)
+        create_question(question_text="Past Question 2", days=-20)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(response.context['latest_question_list'], ['<Question: Past Question 2>',
+                                                                            '<Question: Past Question 1>'])
+
+
 
